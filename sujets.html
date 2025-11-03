@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu des sujets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .instructions {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .instructions p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        #startBtn, #finishBtn {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #startBtn:hover, #finishBtn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        #gameArea {
+            display: none;
+        }
+
+        .phrase {
+            background: #f9f9f9;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+            font-size: 1.05em;
+            text-align: left;
+            word-spacing: normal;
+        }
+
+        .word {
+            cursor: pointer;
+            transition: all 0.1s;
+            display: inline;
+            white-space: normal;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+        }
+        
+        .word:active {
+            background: transparent;
+        }
+
+        .word.selected {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 0 0 3px #667eea;
+            border-radius: 2px;
+        }
+
+        .word.correct {
+            background: #10b981;
+            color: white;
+            box-shadow: 0 0 0 3px #10b981;
+            border-radius: 2px;
+        }
+
+        .word.incorrect {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 0 0 3px #ef4444;
+            border-radius: 2px;
+        }
+
+        #finishBtn {
+            display: none;
+            background: #10b981;
+        }
+
+        #finishBtn:hover {
+            background: #059669;
+        }
+
+        #result {
+            display: none;
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        #result h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        #score {
+            font-size: 3em;
+            color: #10b981;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        #restartBtn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #restartBtn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Jeu des sujets</h1>
+        
+        <div id="welcome">
+            <div class="instructions">
+                <p><strong>Règle du jeu :</strong></p>
+                <p>Trouvez les 10 sujets dans les phrases présentées.</p>
+                <p>Cliquez sur les mots ou groupes de mots qui sont les sujets des verbes.</p>
+                <p>Cliquez sur "Terminé" quand vous avez fini !</p>
+            </div>
+            <button id="startBtn">Jouer</button>
+        </div>
+
+        <div id="gameArea">
+            <div id="phrases"></div>
+            <button id="finishBtn">Terminé</button>
+        </div>
+
+        <div id="result">
+            <h2>Résultat</h2>
+            <div id="score"></div>
+            <p id="message"></p>
+            <button id="restartBtn">Rejouer</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedWords = [];
+        let gameData = [];
+        let allPhrases = [];
+
+        // Générateur de phrases avec analyse correcte des sujets (groupés)
+        function generatePhrases() {
+            const phrases = [
+                "Le soleil brille dans le ciel bleu et réchauffe la terre.",
+                "Marie court rapidement vers l'école car elle est en retard.",
+                "Les oiseaux chantent doucement dans les arbres du jardin.",
+                "Mon petit frère dessine un château sur sa feuille blanche.",
+                "Papa prépare le dîner pendant que maman lit un livre.",
+                "Les enfants jouent au ballon dans la cour de récréation.",
+                "Le chat dort paisiblement sur le canapé du salon.",
+                "Grand-mère raconte une belle histoire avant le coucher.",
+                "Nous partons en vacances demain matin très tôt.",
+                "Les fleurs poussent rapidement grâce à la pluie.",
+                "Jules apprend sa leçon de géographie pour demain.",
+                "Le train arrive à la gare à huit heures précises.",
+                "Sophie range sa chambre tous les samedis matin.",
+                "Les étoiles brillent dans le ciel de la nuit.",
+                "Mon chien aboie quand quelqu'un sonne à la porte.",
+                "Lucas finit ses devoirs avant d'aller jouer dehors.",
+                "Maman arrose les plantes du balcon chaque jour.",
+                "Le boulanger fait du pain frais tous les matins.",
+                "Emma cherche son jouet préféré dans toute la maison.",
+                "Les vagues viennent lécher le sable de la plage.",
+                "Thomas mange une pomme rouge à la récréation.",
+                "La pluie tombe doucement sur les toits des maisons.",
+                "Les élèves écoutent attentivement les explications du professeur.",
+                "Le vent souffle fort et fait tomber les feuilles.",
+                "Léa aide sa petite sœur à mettre ses chaussures.",
+                "Le fermier nourrit ses animaux dans la grange.",
+                "Nous regardons un film amusant en famille ce soir.",
+                "Les papillons volent de fleur en fleur dans le jardin.",
+                "Paul écrit une lettre à son correspondant italien.",
+                "La neige recouvre la montagne d'un manteau blanc."
+            ];
+
+            // Identification des sujets comme GROUPES (chaque groupe est un sujet)
+            const phrasesWithSubjects = [
+                { text: phrases[0], subjectGroups: [[0, 1]] },              // 1 sujet: "Le soleil"
+                { text: phrases[1], subjectGroups: [[0], [6]] },            // 2 sujets: "Marie", "elle"
+                { text: phrases[2], subjectGroups: [[0, 1]] },              // 1 sujet: "Les oiseaux"
+                { text: phrases[3], subjectGroups: [[0, 1, 2]] },           // 1 sujet: "Mon petit frère"
+                { text: phrases[4], subjectGroups: [[0], [6]] },            // 2 sujets: "Papa", "maman"
+                { text: phrases[5], subjectGroups: [[0, 1]] },              // 1 sujet: "Les enfants"
+                { text: phrases[6], subjectGroups: [[0, 1]] },              // 1 sujet: "Le chat"
+                { text: phrases[7], subjectGroups: [[0]] },                 // 1 sujet: "Grand-mère"
+                { text: phrases[8], subjectGroups: [[0]] },                 // 1 sujet: "Nous"
+                { text: phrases[9], subjectGroups: [[0, 1]] },              // 1 sujet: "Les fleurs"
+                { text: phrases[10], subjectGroups: [[0]] },                // 1 sujet: "Jules"
+                { text: phrases[11], subjectGroups: [[0, 1]] },             // 1 sujet: "Le train"
+                { text: phrases[12], subjectGroups: [[0]] },                // 1 sujet: "Sophie"
+                { text: phrases[13], subjectGroups: [[0, 1]] },             // 1 sujet: "Les étoiles"
+                { text: phrases[14], subjectGroups: [[0, 1], [4]] },        // 2 sujets: "Mon chien", "quelqu'un"
+                { text: phrases[15], subjectGroups: [[0]] },                // 1 sujet: "Lucas"
+                { text: phrases[16], subjectGroups: [[0]] },                // 1 sujet: "Maman"
+                { text: phrases[17], subjectGroups: [[0, 1]] },             // 1 sujet: "Le boulanger"
+                { text: phrases[18], subjectGroups: [[0]] },                // 1 sujet: "Emma"
+                { text: phrases[19], subjectGroups: [[0, 1]] },             // 1 sujet: "Les vagues"
+                { text: phrases[20], subjectGroups: [[0]] },                // 1 sujet: "Thomas"
+                { text: phrases[21], subjectGroups: [[0, 1]] },             // 1 sujet: "La pluie"
+                { text: phrases[22], subjectGroups: [[0, 1]] },             // 1 sujet: "Les élèves"
+                { text: phrases[23], subjectGroups: [[0, 1]] },             // 1 sujet: "Le vent"
+                { text: phrases[24], subjectGroups: [[0]] },                // 1 sujet: "Léa"
+                { text: phrases[25], subjectGroups: [[0, 1]] },             // 1 sujet: "Le fermier"
+                { text: phrases[26], subjectGroups: [[0]] },                // 1 sujet: "Nous"
+                { text: phrases[27], subjectGroups: [[0, 1]] },             // 1 sujet: "Les papillons"
+                { text: phrases[28], subjectGroups: [[0]] },                // 1 sujet: "Paul"
+                { text: phrases[29], subjectGroups: [[0, 1]] }              // 1 sujet: "La neige"
+            ];
+
+            return phrasesWithSubjects;
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('finishBtn').addEventListener('click', finishGame);
+        document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+        function startGame() {
+            document.getElementById('welcome').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+            
+            // Générer toutes les phrases si ce n'est pas déjà fait
+            if (allPhrases.length === 0) {
+                allPhrases = generatePhrases();
+            }
+            
+            // Mélanger toutes les phrases
+            const shuffled = [...allPhrases].sort(() => Math.random() - 0.5);
+            
+            // Sélectionner des phrases pour avoir exactement 10 sujets (groupes)
+            gameData = [];
+            let totalSubjects = 0;
+            
+            for (let phrase of shuffled) {
+                const subjectsInPhrase = phrase.subjectGroups.length;
+                if (totalSubjects + subjectsInPhrase <= 10) {
+                    gameData.push(phrase);
+                    totalSubjects += subjectsInPhrase;
+                    if (totalSubjects === 10) break;
+                }
+            }
+            
+            // Si on n'a pas exactement 10, réessayer avec une approche différente
+            if (totalSubjects < 10) {
+                gameData = [];
+                totalSubjects = 0;
+                for (let phrase of shuffled) {
+                    gameData.push(phrase);
+                    totalSubjects += phrase.subjectGroups.length;
+                    if (totalSubjects >= 10) break;
+                }
+            }
+            
+            displayPhrases();
+            document.getElementById('finishBtn').style.display = 'block';
+        }
+
+        function displayPhrases() {
+            const phrasesContainer = document.getElementById('phrases');
+            phrasesContainer.innerHTML = '';
+            
+            gameData.forEach((phrase, phraseIndex) => {
+                const phraseDiv = document.createElement('div');
+                phraseDiv.className = 'phrase';
+                
+                const words = phrase.text.split(' ');
+                
+                // Créer une liste plate de tous les indices de mots qui sont des sujets
+                const allSubjectWordIndices = [];
+                phrase.subjectGroups.forEach(group => {
+                    group.forEach(wordIndex => {
+                        allSubjectWordIndices.push(wordIndex);
+                    });
+                });
+                
+                // Créer le texte comme un flux continu
+                words.forEach((word, wordIndex) => {
+                    const wordSpan = document.createElement('span');
+                    wordSpan.className = 'word';
+                    wordSpan.textContent = word;
+                    wordSpan.dataset.phraseIndex = phraseIndex;
+                    wordSpan.dataset.wordIndex = wordIndex;
+                    wordSpan.dataset.isSubject = allSubjectWordIndices.includes(wordIndex) ? 'true' : 'false';
+                    
+                    wordSpan.addEventListener('click', toggleWord);
+                    phraseDiv.appendChild(wordSpan);
+                    
+                    // Ajouter un espace après chaque mot sauf le dernier
+                    if (wordIndex < words.length - 1) {
+                        phraseDiv.appendChild(document.createTextNode(' '));
+                    }
+                });
+                
+                phrasesContainer.appendChild(phraseDiv);
+            });
+        }
+
+        function toggleWord(e) {
+            e.preventDefault();
+            const word = e.target;
+            const key = `${word.dataset.phraseIndex}-${word.dataset.wordIndex}`;
+            
+            if (word.classList.contains('selected')) {
+                word.classList.remove('selected');
+                selectedWords = selectedWords.filter(w => w !== key);
+            } else {
+                word.classList.add('selected');
+                selectedWords.push(key);
+            }
+        }
+
+        function finishGame() {
+            let correctSubjects = 0;
+            let totalSubjects = 0;
+            let incorrectSelections = 0;
+            
+            // Calculer le score par GROUPES de sujets
+            gameData.forEach((phrase, phraseIndex) => {
+                phrase.subjectGroups.forEach((group, groupIndex) => {
+                    totalSubjects++;
+                    
+                    // Vérifier si TOUS les mots du groupe ont été sélectionnés
+                    const allWordsSelected = group.every(wordIndex => {
+                        const key = `${phraseIndex}-${wordIndex}`;
+                        return selectedWords.includes(key);
+                    });
+                    
+                    if (allWordsSelected) {
+                        correctSubjects++;
+                    }
+                });
+            });
+            
+            // Compter les erreurs : mots sélectionnés qui ne sont pas des sujets
+            document.querySelectorAll('.word').forEach(word => {
+                const key = `${word.dataset.phraseIndex}-${word.dataset.wordIndex}`;
+                const isSubject = word.dataset.isSubject === 'true';
+                const isSelected = selectedWords.includes(key);
+                
+                if (!isSubject && isSelected) {
+                    incorrectSelections++;
+                }
+            });
+            
+            // Marquer les mots
+            document.querySelectorAll('.word').forEach(word => {
+                const key = `${word.dataset.phraseIndex}-${word.dataset.wordIndex}`;
+                const isSubject = word.dataset.isSubject === 'true';
+                const isSelected = selectedWords.includes(key);
+                
+                word.style.pointerEvents = 'none';
+                word.classList.remove('selected');
+                
+                if (isSubject && isSelected) {
+                    word.classList.add('correct');
+                } else if (!isSubject && isSelected) {
+                    word.classList.add('incorrect');
+                } else if (isSubject && !isSelected) {
+                    word.style.opacity = '0.5';
+                    word.style.textDecoration = 'underline';
+                }
+            });
+            
+            // Afficher le résultat avec pénalité
+            document.getElementById('finishBtn').style.display = 'none';
+            showResult(correctSubjects, incorrectSelections, totalSubjects);
+        }
+
+        function showResult(correct, incorrect, total) {
+            // Appliquer une pénalité : chaque erreur retire 1 point
+            const finalScore = Math.max(0, correct - incorrect);
+            const percentage = Math.round((finalScore / total) * 100);
+            
+            document.getElementById('score').textContent = `${finalScore}/${total} (${percentage}%)`;
+            
+            let message = '';
+            if (incorrect > 0) {
+                message = `⚠️ ${correct} sujets trouvés, mais ${incorrect} erreur${incorrect > 1 ? 's' : ''} (-${incorrect} point${incorrect > 1 ? 's' : ''}). `;
+            }
+            
+            if (percentage === 100 && incorrect === 0) {
+                message += '🎉 Parfait ! Vous êtes un expert en grammaire !';
+            } else if (percentage >= 80) {
+                message += '👏 Excellent travail ! Vous maîtrisez bien les sujets !';
+            } else if (percentage >= 60) {
+                message += '👍 Bien joué ! Continuez à vous entraîner !';
+            } else {
+                message += '💪 Continuez vos efforts, vous progresserez !';
+            }
+            
+            document.getElementById('message').textContent = message;
+            document.getElementById('result').style.display = 'block';
+        }
+
+        function resetGame() {
+            selectedWords = [];
+            gameData = [];
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('welcome').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
